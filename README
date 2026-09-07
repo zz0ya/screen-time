@@ -1,0 +1,20 @@
+# screen time
+
+Monitors X Window screen state and logs switches.
+
+## Installation
+
+This depends on `xset` application and is useless if DPMS is not enabled.
+
+Just copy the script and add something like this into your `.xinitrc`:
+
+  # turn off the screen after 2 minutes of inactivity
+  xset dpms 0 120 0
+  python $HOME/scripts/screen_time.py &
+
+## Logging
+
+It logs into `$HOME/screentime.jsonl` and entries look like this:
+
+  {"boot_at": "2026-09-07 09:17:55", "started_at": "2026-09-07 09:20:10", "ended_at": "2026-09-07 14:20:50", "total_on": "0:45:00", "total_off": "4:15:30", "switches": ["2026-09-07 09:20:10", "2026-09-07 09:30:41", "2026-09-07 13:29:09", "2026-09-07 13:33:49"]}
+
