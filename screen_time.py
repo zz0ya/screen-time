@@ -61,17 +61,22 @@ def register_switch():
         return
     switches.append(t)
 
-signal.signal(signal.SIGINT, finish)
-signal.signal(signal.SIGHUP, finish)
-signal.signal(signal.SIGTERM, finish)
-signal.signal(signal.SIGINFO, print_state)
+for sig in ('SIGINT', 'SIGHUP', 'SIGTERM'):
+    signal.signal(getattr(signal, sig), finish)
+if hasattr(signal, 'SIGINFO'):
+    signal.signal(signal.SIGINFO, print_state)
 
 STATE_COMMAND = "xset q | grep -q 'Monitor is On'"
 def is_monitor_on():
     return 0 == os.system(STATE_COMMAND)
 
 BOOTTIME_COMMAND = 'sysctl -n kern.boottime'
+UPTIME = '/proc/uptime'
 def boot_at():
+    if os.access(UPTIME, os.R_OK):
+        res = Path(UPTIME).read_text()
+        secs = int(re.search(r'\d+', res).group(0))
+        return now() - datetime.timedelta(seconds=secs)
     res = subprocess.check_output(BOOTTIME_COMMAND, text=True, shell=True)
     secs = re.search(r'\d+', res).group(0)
     return datetime.datetime.fromtimestamp(int(secs))
