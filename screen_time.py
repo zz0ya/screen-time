@@ -10,6 +10,9 @@ import subprocess
 import sys
 from pathlib import Path
 
+if not 'DISPLAY' in os.environ:
+    sys.exit('This proram is meant to be executed inside X Window session')
+
 LOG = Path.home() / 'screentime.jsonl'
 
 CHECK_INTERVAL = 10
