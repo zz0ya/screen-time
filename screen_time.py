@@ -42,10 +42,21 @@ def collected_data():
             'ended_at': now_dt(),
             'total_on': ts(on_time),
             'total_off': ts(off_time),
-            'switches': switches }
+            'switches': list(map(dt, switches))}
 
 def print_state(_sig, _frame):
     print(f"on: {ts(on_time)}, off: {ts(off_time)}, switches: {len(switches)}")
+
+MIN_LOG_PERIOD = 90
+def is_period_short(t):
+    return len(switches) > 0 and (t - switches[-1]).seconds < MIN_LOG_PERIOD
+
+def register_switch():
+    t = now()
+    if is_period_short(t):
+        switches.pop()
+        return
+    switches.append(t)
 
 signal.signal(signal.SIGINT, finish)
 signal.signal(signal.SIGHUP, finish)
@@ -76,6 +87,6 @@ while True:
         off_time += CHECK_INTERVAL
     if is_on != prev_state:
         prev_state = is_on
-        switches.append(now_dt())
+        register_switch()
     time.sleep(CHECK_INTERVAL)
 
