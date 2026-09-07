@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import datetime
+import json
 import os
 import re
 import time
@@ -9,10 +10,10 @@ import subprocess
 import sys
 from pathlib import Path
 
-LOG = Path.home() / 'screentime.csv'
+LOG = Path.home() / 'screentime.jsonl'
 
 CHECK_INTERVAL = 10
-TIME_FORMAT = '%F %R'
+TIME_FORMAT = '%F %T'
 
 def dt(t):
     return t.strftime(TIME_FORMAT)
@@ -20,8 +21,8 @@ def dt(t):
 def ts(s):
     return str(datetime.timedelta(seconds=s))
 
-on_time = 0
-off_time = 0
+def now_dt():
+    return dt(now())
 
 def finish(_sig, _frame):
     save_log()
@@ -32,11 +33,19 @@ def now():
 
 def save_log():
     with open(LOG, 'a', encoding='ascii') as log:
-        line = ','.join((dt(boot_at()), dt(started_at), dt(now()), ts(on_time), ts(off_time), str(switches_count)))
+        line = json.dumps(collected_data())
         log.write(f"{line}\n")
 
+def collected_data():
+    return {'boot_at': dt(boot_at()),
+            'started_at': STARTED_AT,
+            'ended_at': now_dt(),
+            'total_on': ts(on_time),
+            'total_off': ts(off_time),
+            'switches': switches }
+
 def print_state(_sig, _frame):
-    print(f"on: {ts(on_time)}, off: {ts(off_time)}, switches: {switches_count}")
+    print(f"on: {ts(on_time)}, off: {ts(off_time)}, switches: {len(switches)}")
 
 signal.signal(signal.SIGINT, finish)
 signal.signal(signal.SIGHUP, finish)
@@ -53,9 +62,11 @@ def boot_at():
     secs = re.search(r'\d+', res).group(0)
     return datetime.datetime.fromtimestamp(int(secs))
 
-started_at = now()
-prev_state = False
-switches_count = 0
+on_time = 0
+off_time = 0
+switches = []
+STARTED_AT = now_dt()
+prev_state = None
 
 while True:
     is_on = is_monitor_on()
@@ -65,6 +76,6 @@ while True:
         off_time += CHECK_INTERVAL
     if is_on != prev_state:
         prev_state = is_on
-        switches_count += 1
+        switches.append(now_dt())
     time.sleep(CHECK_INTERVAL)
 
