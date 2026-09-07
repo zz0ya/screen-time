@@ -9,7 +9,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-LOG = Path.home() / 'screentime.log'
+LOG = Path.home() / 'screentime.csv'
 
 CHECK_INTERVAL = 10
 TIME_FORMAT = '%F %R'
@@ -32,13 +32,8 @@ def now():
 
 def save_log():
     with open(LOG, 'a', encoding='ascii') as log:
-        log.write(f"Started at: {started_at}\n")
-        log.write(f"On: {ts(on_time)}\n")
-        if off_time > 0:
-            log.write(f"Off: {ts(off_time)}\n")
-        if switches_count > 0:
-            log.write(f"Switches: {switches_count}\n")
-        log.write(f"Finished at: {fin_at}\n")
+        line = ','.join((dt(boot_at()), dt(started_at), dt(now()), ts(on_time), ts(off_time), str(switches_count)))
+        log.write(f"{line}\n")
 
 def print_state(_sig, _frame):
     print(f"on: {ts(on_time)}, off: {ts(off_time)}, switches: {switches_count}")
@@ -48,10 +43,15 @@ signal.signal(signal.SIGHUP, finish)
 signal.signal(signal.SIGTERM, finish)
 signal.signal(signal.SIGINFO, print_state)
 
-STATE_COMMAND = "xset q | grep 'Monitor is On' > /dev/null"
+STATE_COMMAND = "xset q | grep -q 'Monitor is On'"
 def is_monitor_on():
     return 0 == os.system(STATE_COMMAND)
 
+BOOTTIME_COMMAND = 'sysctl -n kern.boottime'
+def boot_at():
+    res = subprocess.check_output(BOOTTIME_COMMAND, text=True, shell=True)
+    secs = re.search(r'\d+', res).group(0)
+    return datetime.datetime.fromtimestamp(int(secs))
 
 started_at = now()
 prev_state = False
